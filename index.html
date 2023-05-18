@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Jogo da Velha</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f2f2f2;
+        }
+
+        h1 {
+            color: #333333;
+        }
+
+        #board {
+            margin: 0 auto;
+            border-collapse: collapse;
+            transform: scale(0.9);
+            transition: transform 0.3s;
+        }
+
+        #board td {
+            width: 100px;
+            height: 100px;
+            font-size: 48px;
+            text-align: center;
+            vertical-align: middle;
+            border: 2px solid #333333;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #board td:hover {
+            background-color: #dddddd;
+        }
+
+        #message {
+            margin-top: 20px;
+            font-size: 24px;
+            color: #333333;
+        }
+
+        #reset {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #333333;
+            color: #ffffff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #reset:hover {
+            background-color: #555555;
+        }
+
+        #player-options {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #333333;
+        }
+
+        #player-options label {
+            margin-right: 10px;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 50px;
+        }
+
+        .player-x {
+            color: #009688;
+        }
+
+        .player-o {
+            color: #e91e63;
+        }
+
+        .winner {
+            font-weight: bold;
+            font-size: 28px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .tie {
+            color: #607d8b;
+        }
+
+        .ai-move {
+            animation: ai-move-animation 0.5s;
+        }
+
+        @keyframes ai-move-animation {
+            0% {
+                background-color: #ffffff;
+            }
+            50% {
+                background-color: #fff3e0;
+            }
+            100% {
+                background-color: #ffffff;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Jogo da Velha</h1>
+        <table id="board">
+            <tr>
+                <td onclick="makeMove(0, 0)"></td>
+                <td onclick="makeMove(0, 1)"></td>
+                <td onclick="makeMove(0, 2)"></td>
+            </tr>
+            <tr>
+                <td onclick="makeMove(1, 0)"></td>
+                <td onclick="makeMove(1, 1)"></td>
+                <td onclick="makeMove(1, 2)"></td>
+            </tr>
+            <tr>
+                <td onclick="makeMove(2, 0)"></td>
+                <td onclick="makeMove(2, 1)"></td>
+                <td onclick="makeMove(2, 2)"></td>
+            </tr>
+        </table>
+
+        <p id="message"></p>
+        <button id="reset" onclick="resetBoard()">Reiniciar</button>
+
+        <div id="player-options">
+            <label><input type="radio" name="player" value="human" checked> Jogador vs. Jogador</label>
+            <label><input type="radio" name="player" value="ai"> Jogador vs. Máquina</label>
+        </div>
+    </div>
+
+    <script>
+        var board = [
+            ['', '', ''],
+            ['', '', ''],
+            ['', '', '']
+        ];
+        var currentPlayer = 'X';
+        var gameEnded = false;
+        var playerOption = document.querySelector('input[name="player"]:checked').value;
+
+        function makeMove(row, col) {
+            if (!gameEnded && board[row][col] === '') {
+                board[row][col] = currentPlayer;
+                document.getElementById('board').rows[row].cells[col].innerText = currentPlayer;
+                document.getElementById('board').rows[row].cells[col].classList.add('player-' + currentPlayer.toLowerCase());
+                currentPlayer = (currentPlayer === 'X') ? 'O' : 'X';
+                checkWinner();
+
+                if (!gameEnded && playerOption === 'ai' && currentPlayer === 'O') {
+                    makeAIMove();
+                }
+            }
+        }
+
+        function makeAIMove() {
+            var bestScore = -Infinity;
+            var bestMove;
+
+            for (var row = 0; row < board.length; row++) {
+                for (var col = 0; col < board[row].length; col++) {
+                    if (board[row][col] === '') {
+                        board[row][col] = 'O';
+                        var score = minimax(board, 0, false);
+                        board[row][col] = '';
+
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestMove = { row, col };
+                        }
+                    }
+                }
+            }
+
+            var { row, col } = bestMove;
+            setTimeout(function() {
+                makeMove(row, col);
+                document.getElementById('board').rows[row].cells[col].classList.add('ai-move');
+                setTimeout(function() {
+                    document.getElementById('board').rows[row].cells[col].classList.remove('ai-move');
+                }, 500);
+            }, 500);
+        }
+
+        function minimax(board, depth, isMaximizingPlayer) {
+            var scores = {
+                X: -1,
+                O: 1,
+                tie: 0
+            };
+
+            var result = checkResult(board);
+            if (result !== null) {
+                return scores[result];
+            }
+
+            if (isMaximizingPlayer) {
+                var bestScore = -Infinity;
+                for (var row = 0; row < board.length; row++) {
+                    for (var col = 0; col < board[row].length; col++) {
+                        if (board[row][col] === '') {
+                            board[row][col] = 'O';
+                            var score = minimax(board, depth + 1, false);
+                            board[row][col] = '';
+                            bestScore = Math.max(score, bestScore);
+                        }
+                    }
+                }
+                return bestScore;
+            } else {
+                var bestScore = Infinity;
+                for (var row = 0; row < board.length; row++) {
+                    for (var col = 0; col < board[row].length; col++) {
+                        if (board[row][col] === '') {
+                            board[row][col] = 'X';
+                            var score = minimax(board, depth + 1, true);
+                            board[row][col] = '';
+                            bestScore = Math.min(score, bestScore);
+                        }
+                    }
+                }
+                return bestScore;
+            }
+        }
+
+        function checkResult(board) {
+            var winningCombinations = [
+                [[0, 0], [0, 1], [0, 2]],  // Horizontal
+                [[1, 0], [1, 1], [1, 2]],
+                [[2, 0], [2, 1], [2, 2]],
+                [[0, 0], [1, 0], [2, 0]],  // Vertical
+                [[0, 1], [1, 1], [2, 1]],
+                [[0, 2], [1, 2], [2, 2]],
+                [[0, 0], [1, 1], [2, 2]],  // Diagonal
+                [[0, 2], [1, 1], [2, 0]]
+            ];
+
+            for (var i = 0; i < winningCombinations.length; i++) {
+                var combination = winningCombinations[i];
+                var [a, b, c] = combination;
+                var [rowA, colA] = a;
+                var [rowB, colB] = b;
+                var [rowC, colC] = c;
+
+                if (board[rowA][colA] !== '' && board[rowA][colA] === board[rowB][colB] && board[rowB][colB] === board[rowC][colC]) {
+                    return board[rowA][colA];
+                }
+            }
+
+            var isBoardFull = true;
+            for (var row = 0; row < board.length; row++) {
+                for (var col = 0; col < board[row].length; col++) {
+                    if (board[row][col] === '') {
+                        isBoardFull = false;
+                        break;
+                    }
+                }
+                if (!isBoardFull) {
+                    break;
+                }
+            }
+
+            if (isBoardFull) {
+                return 'tie';
+            }
+
+            return null;
+        }
+
+        function checkWinner() {
+            var result = checkResult(board);
+            if (result !== null) {
+                if (result === 'tie') {
+                    document.getElementById('message').innerText = 'O jogo terminou em empate!';
+                    document.getElementById('message').className = 'tie';
+                } else {
+                    document.getElementById('message').innerText = 'O jogador ' + result + ' ganhou!';
+                    document.getElementById('message').className = 'winner player-' + result.toLowerCase();
+                }
+                gameEnded = true;
+            }
+        }
+
+        function resetBoard() {
+            board = [
+                ['', '', ''],
+                ['', '', ''],
+                ['', '', '']
+            ];
+            currentPlayer = 'X';
+            gameEnded = false;
+
+            var cells = document.getElementsByTagName('td');
+            for (var i = 0; i < cells.length; i++) {
+                cells[i].innerText = '';
+                cells[i].classList.remove('player-x');
+                cells[i].classList.remove('player-o');
+            }
+
+            document.getElementById('message').innerText = '';
+            document.getElementById('message').className = '';
+        }
+
+        document.getElementById('player-options').addEventListener('change', function() {
+            playerOption = document.querySelector('input[name="player"]:checked').value;
+            resetBoard();
+        });
+
+        document.getElementById('board').addEventListener('mouseover', function() {
+            document.getElementById('board').style.transform = 'scale(1)';
+        });
+
+        document.getElementById('board').addEventListener('mouseout', function() {
+            document.getElementById('board').style.transform = 'scale(0.9)';
+        });
+    </script>
+</body>
+</html>
